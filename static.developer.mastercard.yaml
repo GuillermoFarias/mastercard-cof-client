@@ -1,0 +1,1499 @@
+openapi: 3.0.1
+info:
+  description: |2
+
+    Click to Pay checkout used by Merchants to receive payload data from the Click to Pay System and send the results of transaction authorisation back to the Click to Pay System. Endpoints are available to retrieve payload data and send the outcome of a payment or checkout.
+
+    The signing of the request is as per the process documented at [https://developer.mastercard.com/support-article/what-authentication-requirements-are-there-to-use-the-raw-rest-protocol](https://developer.mastercard.com/support-article/what-authentication-requirements-are-there-to-use-the-raw-rest-protocol)
+
+    The signing process and calcualtion of body hash follows draft given by Google and documented at [https://tools.ietf.org/id/draft-eaton-oauth-bodyhash-00.html](https://tools.ietf.org/id/draft-eaton-oauth-bodyhash-00.html)
+  version: 1.3.2
+  title: "Checkout, Save Card On File, Delete Saved Card On File And Confirmations API"
+  termsOfService: https://developer.mastercard.com/terms-of-use
+  contact:
+    email: apisupport@mastercard.com
+    url: https://developer.mastercard.com/support
+    name: API Support
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+tags:
+  - name: Checkout
+    description: Fetch checkout transaction credentials for transaction initiated via DCF to SRCI server. In future may also be used for server to server transaction initation.
+  - name: Transaction
+    description: Send confirmation of result of payment to Mastercard's SRCI.
+  - name: Card On File
+    description: Save or Delete a Card on File which can be used to support operations related to payment card digitization.
+servers:
+  - url: https://sandbox.api.mastercard.com/srci/api/
+    description: sandbox
+  - url: https://api.mastercard.com/srci/api/
+    description: production
+paths:
+  /checkout:
+    post:
+      summary: "Used either for Server to Server Checkout (allow the SRCI server to perform a checkout), or to obtain the encrypted transaction payload via the response."
+      description: |
+        This operation provides for two situations:
+
+        1. Server to Server checkout, where the SRCI server initiates a checkout directly. This is not currently supported.
+        2. Allows SRCI server to fetch the transaction credentials of a checkout transaction initated via DCF. This is the typical use case.
+      operationId: checkout
+      tags:
+        - Checkout
+      parameters:
+        - name: x-openapi-clientid
+          description: Open API key to make the server to server call to Mastercard SRCI. This ID is provided to the client during the onboarding process to make OAuth1.0 based signed requests. The value MUST match the SRC Client ID present in the request body.
+          example: 3f34bev5-55dc-4c2d-a971-3ec37175364k
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: x-src-cx-flow-id
+          description: "The X-SRC-CX-FLOW-ID helps in routing and session affinity. Usage of X-SRC-CX-FLOW-ID in requests ensures requests by the same client are directed to the same server. When you make your initial API call, use the X-SRC-CX-FLOW-ID, returned in one of the client-side calls checkoutWithNewCard() or checkoutWitCard(). If you do not send X-SRC-CX-FLOW-ID in your request or if the field is empty, the Click to Pay system generates one and responds with the X-SRC-CX-FLOW-ID in the header. The X-SRC-CX-FLOW-ID returned in the response can be used in the subsequent calls to ensure these calls are directed to the same server that returned the initial response."
+          example: 34F4A04B.B9EF8486-E8C1-44F3-88DC-D4F516A354DC.1587777300
+          in: header
+          schema:
+            type: string
+      x-mastercard-api-encrypted: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckoutRequest'
+            examples:
+              EXAMPLE - CLICK_TO_PAY:
+                value:
+                  dpaTransactionOptions:
+                    transactionAmount:
+                      transactionAmount: 100.0
+                      transactionCurrencyCode: USD
+                  srcDpaId: b756a2b0-ef62-4c62-a6de-f72e75ce5f17
+                  correlationId: ba7a2034-3c9e-4d74-b0e9-d77435fd35d7
+                  checkoutType: CLICK_TO_PAY
+                  checkoutReference:
+                    type: MERCHANT_TRANSACTION_ID
+                    data:
+                      merchantTransactionId: 0a4e0d3.34f4a04b.47ee82c373dd4fd5398f3980b39eb6d648b9687c
+              EXAMPLE - CARD_ON_FILE:
+                value:
+                  dpaTransactionOptions:
+                    transactionAmount:
+                      transactionAmount: 100.0
+                      transactionCurrencyCode: USD
+                    paymentOptions:
+                      - dynamicDataType: CARD_APPLICATION_CRYPTOGRAM_SHORT_FORM
+                  srcDpaId: b756a2b0-ef62-4c62-a6de-f72e75ce5f17
+                  correlationId: ba7a2034-3c9e-4d74-b0e9-d77435fd35d7
+                  merchantAccountId: 371d778c-62f6-450c-bf30-94093b89a17c
+                  checkoutType: CARD_ON_FILE_TOKENIZATION
+                  checkoutReference:
+                    type: MERCHANT_CARD_ID
+                    data:
+                      merchantCardId: bb5ba5ce-49cf-41f5-b479-55826842c544
+              EXAMPLE - INSTALLMENTS_AT_CHECKOUT:
+                value:
+                  dpaTransactionOptions:
+                    transactionAmount:
+                      transactionAmount: 100.0
+                      transactionCurrencyCode: USD
+                  srcDpaId: b756a2b0-ef62-4c62-a6de-f72e75ce5f17
+                  correlationId: ba7a2034-3c9e-4d74-b0e9-d77435fd35d7
+                  checkoutType: INSTALLMENTS
+                  checkoutReference:
+                    type: MERCHANT_TRANSACTION_ID
+                    data:
+                      merchantTransactionId: 0a4e0d3.34f4a04b.47ee82c373dd4fd5398f3980b39eb6d648b9687c
+              EXAMPLE - GUEST_CHECKOUT_TOKENIZATION:
+                value:
+                  dpaTransactionOptions:
+                    transactionAmount:
+                      transactionAmount: 100.0
+                      transactionCurrencyCode: USD
+                    paymentOptions:
+                      - dynamicDataType: CARD_APPLICATION_CRYPTOGRAM_SHORT_FORM
+                  srcDpaId: b756a2b0-ef62-4c62-a6de-f72e75ce5f17
+                  correlationId: ba7a2034-3c9e-4d74-b0e9-d77435fd35d7
+                  merchantAccountId: 371d778c-62f6-450c-bf30-94093b89a17c
+                  checkoutType: GUEST_CHECKOUT_TOKENIZATION
+                  checkoutReference:
+                    type: ENCRYPTED_CARD
+                    data:
+                      encryptedCard: eyJlbmMiOiJBMTI4R0NNIiwiYWxnIjoiUlNBLU9BRVAtMjU2In0.hs5wCFI51RyhCrRvtxt8EqqQ6voz8VazV0vUFpcXBI3FoIxChXtr8-ec7TIdsZ6u2ZvpyjtnCn5IrfYgDsJdSSc-AAey_KKrvuwo5RkOOBEfyRn9LggEmcStOhi_g5ev9BTadEhG1ri48TpYGigSIM-7RWXDwAOqPBH6s-NJQ6mgIK1tGTWdqN6duVx0tBwfUyFtyDm8iiAPXtfADC--BpBEBg0aKj071BN47ilYOVitRT1e99enzYrtM881SObZpXzy2NrJDIk3f0DgfbB7twr294CPM5pgek5n3iDXvWr-U-xvGMpMPPnB-uhz3--AEw6V4ImpplOj9FYnf3itqA.KXl6-_JbcFg6KK4q.eXdZXgFKFNaS2Zg_VyWG2Z7EgUqbXAkoY9PUvMVYGCpqZlBoYz2zy1ocGPMZ9b_ya_3Y8re5SBMENBYpsrRm3l9OnpIP2x7yrXtBYMerrC0vsxj9i8Es-M3f23KNsriF0IJoEnZlhlsVL0Qs4k5hR8Ch6pijTkuN3Q.H3mruZqdtzxazTssfd2V0g
+        required: true
+      responses:
+        "200":
+          description: "OK, transaction credentials details included in the response body."
+          headers:
+            x-src-cx-flow-id:
+              description: "The X-SRC-CX-FLOW-ID helps in routing and session affinity. Usage of X-SRC-CX-FLOW-ID in requests ensures requests by the same client are directed to the same server. When you make your initial API call, use the X-SRC-CX-FLOW-ID, returned in one of the client-side calls checkoutWithNewCard() or checkoutWitCard(). If you do not send X-SRC-CX-FLOW-ID in your request or if the field is empty, the Click to Pay system generates one and responds with the X-SRC-CX-FLOW-ID in the header. The X-SRC-CX-FLOW-ID returned in the response can be used in the subsequent calls to ensure these calls are directed to the same server that returned the initial response."
+              example: 34F4A04B.B9EF8486-E8C1-44F3-88DC-D4F516A354DC.1587777300
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckoutResponse'
+              examples:
+                EXAMPLE - CLICK_TO_PAY:
+                  value:
+                    merchantTransactionId: 0a4e0d3.34f4a04b.47ee82c373dd4fd5398f3980b39eb6d648b9687c
+                    encryptedPayload: eyJlbmMiOiJBMTI4Q0JDLUhTMjU2IiwiYWxnIjoiUlNBLU9BRVAtMjU2In0.MIq_v15_eowvwX8MRgrb_H1EevZKB9CZSMMD8-lcbTjQvPFwAyx1USZbZRDB3RGfA_of6aDggnbmQmgsUStPQEpzYMma5mxlv5-VT6ry94xyttBFuCjBV0hudmcOEHiQeIiwS5xBb1iBPFaXTEmMpgDv8lvAm_ncbJ0V5FFDUYYVhK0-SbaODY5OKMdP2N3Y9bCkqjLCAcmkkN3mkrJ6WbzJURmNdfPyL344Cxc14NLZW3fk_yHkmjXybIXJWnUUsdxwFWS5ImwaZGEhbeLGGdpsPTkTkwD86uZCYJlx_dsZi02Vbm9AIiPpKE4L8GS_ltmOQ3YfgfxS6UuzYzaxKw.Xi3KLm7BvjSQuPMSVwSepg.U6Yp-DXd55F6jqy8-LIbmxmExzLaZNCF9Rcmg0g7ViUN3ydm_G5IqJmCFgXg1aO50HYJvnxi5OWG_rs6uV-1I2rrpu3bkuSjkj03N82yhFJBbhr8W_ahlgAMv2FPu4k7aeGp5rWm5lEdvH2UpSvKG2Ae111iFtL842Pk0pgPLOv4jnxFaCrvAPZ4vTvHS1RU27XGW7qXfAOtqpZ38oUJFamYueCIycDrsvacPT650O_JM_QS0ReXkH49bgAt1Sog9r2PY7fjU22ff1oGno51uVK_D9EXyHWcD4I5LYdVd6NenPDfycuQZ_wA98nqMCTzrqx5yQjUQDNYOoDF8ztoKVpYsTJeIUcFTpGXfoLLPTWjoIUds3mIyrXtBWO46rqN8c2nQ6FKC04-CBK9RGbWr1q1ENgfmsBvfXPCIUZ5ACzM1UaU2LkgEYlyiaxn-I3MfauP1adsA3ZOhrDHwSNgA0aVejT_9OTOaBUmywKGtdD7E8PhP7JqbMTXH2gM_9xU7t7TRvntE5uXeALKv4EDurn0p5bASwsYie7xWbsMHGF8lN0aGqJhNKiHL_NFGnR0wzPWS3UXFP7wZFbLM9qSPw.XFMSREEcssFqUM5kIwChIA
+                    correlationId: ba7a2034-3c9e-4d74-b0e9-d77435fd35d7
+                    assuranceData:
+                      verificationData:
+                        - verificationType: CARD
+                          verificationEntity: 02
+                          verificationMethod: 02
+                          verificationResults: 05
+                          verificationTimestamp: 1680630558
+                        - verificationType: CONSUMER
+                          verificationEntity: 02
+                          verificationMethod: 05
+                          verificationResults: 01
+                          verificationTimestamp: 1680630477
+                    maskedCard:
+                      srcDigitalCardId: 37e5c999-75f8-45ed-b086-1e1ab4e828fe
+                      panBin: 545503
+                      panLastFour: 0451
+                      digitalCardData:
+                        descriptorName: mastercard
+                        artUri: https://stage.assets.mastercard.com/card-art/combined-image-asset/HIGH-MASK-3x.png
+                        coBrandName: Co brand partner
+                        isCoBranded: true
+                      panExpirationMonth: 08
+                      panExpirationYear: 2023
+                      maskedCardholderFullName: j*** d**
+                      maskedCardholderFirstName: j***
+                      maskedCardholderLastName: d**
+                      paymentCardType: DEBIT
+                      digitalCardFeatures: []
+                    maskedBillingAddress:
+                      name: Ro**t Sh***a
+                      line1: 1** 5** A*****
+                      line2: F**** 1*
+                      city: New York City
+                      state: NY
+                      countryCode: US
+                      zip: 10011
+                    maskedConsumer:
+                      maskedEmailAddress: h*****8@dummyemail.com
+                      maskedMobileNumber:
+                        countryCode: 1
+                        phoneNumber: (***) ***-*005
+                EXAMPLE - CARD_ON_FILE:
+                  value:
+                    merchantTransactionId: 0a4e0d3.34f4a04b.e10411bd66b39a739ff5708a7b73e9b3c5723817
+                    encryptedPayload: eyJlbmMiOiJBMTI4Q0JDLUhTMjU2IiwiYWxnIjoiUlNBLU9BRVAtMjU2In0.XX5EJh5Wtl5pmrAzsED2mO65A7ayiXkdwI9LFTHTjdLcrErLRfO15sM-EIPlI4hMceYGPCNsJeaztBDNnJa2n-2LfAsSALlt09j0X7Ohrxqopjm_sw2e9_nofFfxnDBx2YDGR4dYB554lWSJ1__pkUNOyHWQHPjkSIUcuIscxG-k2IEu5s0fBYXhxP6POoIVTv6pnfbk0nFyZ_Slv9rvCh4MVtWzFBFb04x1DroAbs4OLAdV2wbuI2opWdoA7Edw6hMI6S7ilyR2AzpJZ44kEioyPbJGbWTbE84zgEQhCN4HiQGq_oj48QWsNVrFAAxwsSACFYHwjW34qQ_tUQonKQ._II1ZhVvAXQlrpYqwJrK0g.5GBr5agIeX7-5X_QAc50c8RM9mus6RvSiwtPZtCrTpnEdnY9Wjz5Qza-wIwleolwAyqAAbXbo8Dl6wLFQFjVIaj_WFkHm8H5tLg55lEdtXBe2jShBnvCIpFCA-Nnv3invgLXQqXlRR3H7SJWJ4v8lMQ_TASI8NltdOUb3nsTFE8Teu40YWdwjjCWi4zQFI142xQRsOfZSk1rNgj0ALHJCBWlqUbsN0NZdoHZ4P3yvvnm57FOA_jrOymLubZU98LE3-XtpcX98PbGUu6uJ7yYmBuYAKcVBv0qyDQ3TRUwBT--KlSVAzgix2twr9ON6i3j0Cc-QR9Aca_PDx4j5t4pY1cIQ__LlhyiahLRSuQx4yYrY06kyScPNgmuJLGZ-iXTkroNwXDkRVTAzotK-SAmtg.AyizFlbT8r1kzD5AvBHYeQ
+                    correlationId: ba7a2034-3c9e-4d74-b0e9-d77435fd35d7
+                    merchantCardId: bb5ba5ce-49cf-41f5-b479-55826842c544
+                    assuranceData:
+                      verificationData:
+                        - verificationType: CARD
+                          verificationEntity: 02
+                          verificationMethod: 02
+                          verificationResults: 05
+                          verificationTimestamp: 1680630558
+                    maskedCard:
+                      srcDigitalCardId: 37e5c999-75f8-45ed-b086-1e1ab4e828fe
+                      panBin: 545503
+                      panLastFour: 0451
+                      digitalCardData:
+                        descriptorName: mastercard
+                        artUri: https://stage.assets.mastercard.com/card-art/combined-image-asset/HIGH-MASK-3x.png
+                      panExpirationMonth: 08
+                      panExpirationYear: 2023
+                      paymentCardType: DEBIT
+                      digitalCardFeatures: []
+                EXAMPLE - INSTALLMENTS_AT_CHECKOUT:
+                  value:
+                    merchantTransactionId: 0a4e0d3.34f4a04b.47ee82c373dd4fd5398f3980b39eb6d648b9687c
+                    encryptedPayload: eyJlbmMiOiJBMTI4Q0JDLUhTMjU2IiwiYWxnIjoiUlNBLU9BRVAtMjU2In0.MIq_v15_eowvwX8MRgrb_H1EevZKB9CZSMMD8-lcbTjQvPFwAyx1USZbZRDB3RGfA_of6aDggnbmQmgsUStPQEpzYMma5mxlv5-VT6ry94xyttBFuCjBV0hudmcOEHiQeIiwS5xBb1iBPFaXTEmMpgDv8lvAm_ncbJ0V5FFDUYYVhK0-SbaODY5OKMdP2N3Y9bCkqjLCAcmkkN3mkrJ6WbzJURmNdfPyL344Cxc14NLZW3fk_yHkmjXybIXJWnUUsdxwFWS5ImwaZGEhbeLGGdpsPTkTkwD86uZCYJlx_dsZi02Vbm9AIiPpKE4L8GS_ltmOQ3YfgfxS6UuzYzaxKw.Xi3KLm7BvjSQuPMSVwSepg.U6Yp-DXd55F6jqy8-LIbmxmExzLaZNCF9Rcmg0g7ViUN3ydm_G5IqJmCFgXg1aO50HYJvnxi5OWG_rs6uV-1I2rrpu3bkuSjkj03N82yhFJBbhr8W_ahlgAMv2FPu4k7aeGp5rWm5lEdvH2UpSvKG2Ae111iFtL842Pk0pgPLOv4jnxFaCrvAPZ4vTvHS1RU27XGW7qXfAOtqpZ38oUJFamYueCIycDrsvacPT650O_JM_QS0ReXkH49bgAt1Sog9r2PY7fjU22ff1oGno51uVK_D9EXyHWcD4I5LYdVd6NenPDfycuQZ_wA98nqMCTzrqx5yQjUQDNYOoDF8ztoKVpYsTJeIUcFTpGXfoLLPTWjoIUds3mIyrXtBWO46rqN8c2nQ6FKC04-CBK9RGbWr1q1ENgfmsBvfXPCIUZ5ACzM1UaU2LkgEYlyiaxn-I3MfauP1adsA3ZOhrDHwSNgA0aVejT_9OTOaBUmywKGtdD7E8PhP7JqbMTXH2gM_9xU7t7TRvntE5uXeALKv4EDurn0p5bASwsYie7xWbsMHGF8lN0aGqJhNKiHL_NFGnR0wzPWS3UXFP7wZFbLM9qSPw.XFMSREEcssFqUM5kIwChIA
+                    correlationId: ba7a2034-3c9e-4d74-b0e9-d77435fd35d7
+                    assuranceData:
+                      verificationData: [ ]
+                    maskedCard:
+                      srcDigitalCardId: 37e5c999-75f8-45ed-b086-1e1ab4e828fe
+                      panBin: 545503
+                      panLastFour: 0451
+                      digitalCardData:
+                        descriptorName: mastercard
+                        artUri: https://stage.assets.mastercard.com/card-art/combined-image-asset/HIGH-MASK-3x.png
+                        coBrandName: Co brand partner
+                        isCoBranded: true
+                      panExpirationMonth: 08
+                      panExpirationYear: 2023
+                      paymentCardType: DEBIT
+                      digitalCardFeatures: [ ]
+                    maskedBillingAddress:
+                      name: Ro**t Sh***a
+                      line1: 1** 5** A*****
+                      line2: F**** 1*
+                      city: New York City
+                      state: NY
+                      countryCode: US
+                      zip: 10011
+                EXAMPLE - GUEST_CHECKOUT_TOKENIZATION:
+                  value:
+                    encryptedPayload: eyJlbmMiOiJBMTI4Q0JDLUhTMjU2IiwiYWxnIjoiUlNBLU9BRVAtMjU2In0.zSS7MVR6_QHK4DL2lW8gFmH5oZ5qCl61knGqWQW2PUCLhGd9n4yCYSDaN4FPR1rIziZTU0EWhTlM3P0kjwapbe_R5yYpQoPctl8rRnuJyVOPhR7P6O65vxLtKX428kMaQ3pgWoEA3a6C7Mz2kA2LO7SuDgGlnx1-yLODQ4RKinADxO3nYirh1c7V5K840wXCk4o4yk41bF6-whI4fdZ_lV8ncWMuBO0xagTUMS51fMUYpYVnVfs8gaEyZ8snu_snyHy0dE8KHtPvzi4ebpZVRqI3F_DtMqYOwaFWph_UHocF5KmyjsZJIVMFP0GbLb-HQ4kP0quby9VUc5sqDHTzFA.lZ_UeEEhp9lW7JlPv1iNhA.Qs5UrxPGjeXTTGZO2p-8CjS7jxqL9y0VJxbS9IQ3myJtXXJJo4C8ua7dlV_1SCZGHgNFh9pCQe3GkzcSw3QA7cRJ_4lZXAJNkCtbDIjFLl_Mi3DY-Xh_rrMPN9pUAAunshHm1mbPZtAdZIrHcWde2HjWCZok173idhkAYA3lJlhYTt0ESBk1VCoZYVmg_JRpU47i9qEUvEOgZXKwF7CFCJQkXpY-LV63pw9thadWQq-NaytLl6FXrt5uy1NAHJrgu5DrNzYnm5vbGeFgEVIdJE585FuFA8NMjuHg4l72kt3PGroi1XHUAAhR6MGZlfKCZkrsAP43hRVQNgHlEVmd6NU8G_xnkl1q8UhbNeTDm2BJIxXIeqpj1Q6vQA09NW_o.EppjwrnidvcVI9r99dv1Pg
+                    correlationId: ba7a2034-3c9e-4d74-b0e9-d77435fd35d7
+                    assuranceData:
+                      verificationData:
+                        - verificationType: CARD
+                          verificationEntity: 02
+                          verificationMethod: 02
+                          verificationResults: 05
+                          verificationTimestamp: 1680630558
+                    maskedCard:
+                      srcDigitalCardId: 37e5c999-75f8-45ed-b086-1e1ab4e828fe
+                      panBin: 545503
+                      panLastFour: 0451
+                      digitalCardData:
+                        descriptorName: mastercard
+                        artUri: https://sbx.assets.mastercard.com/card-art/combined-image-asset/99be1915-0bf3-4459-81d3-942085968303.png
+                      panExpirationMonth: 08
+                      panExpirationYear: 2023
+                      digitalCardFeatures: []
+
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+      x-codegen-request-body-name: checkoutTransactionRequest
+  /checkout/confirmations:
+    post:
+      summary: Send results of payment authorization to Unified Checkout Solutions.
+      description: |
+        Use the confirmations endpoint to notify the SRCI the outcome of a checkout or payment.  The confirmation data is sent in the request body and normally the response will be 204 (No Content) .  If an error response is returned, the response body will include further information about the reason for the error.
+      operationId: postConfirmation
+      tags:
+        - Transaction
+      parameters:
+        - name: x-openapi-clientid
+          description: Open API key to make the server to server call to Mastercard SRCI. This ID is provided to the client during the onboarding process to make OAuth1.0 based signed requests. The value MUST match the SRC Client ID present in the request body.
+          example: 3f34bev5-55dc-4c2d-a971-3ec37175364k
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: merchant-transaction-id
+          description: Merchant Checkout Transaction Identifier which is returned in the checkoutResponse to either checkoutWithCard or checkoutWithNewCard JavaScript methods and links the client-side JavaScript calls and server-side API calls for a specific transaction. Optional for Subsequent Payment or Subsequent Split Shipment.
+          example: 0a4e0d3.34f4a04b.390515165b8f87a5a0694cd752752ff6717fce21
+          in: header
+          required: false
+          schema:
+            type: string
+        - name: x-src-cx-flow-id
+          description: "The X-SRC-CX-FLOW-ID helps in routing and session affinity. Usage of X-SRC-CX-FLOW-ID in requests ensures requests by the same client are directed to the same server. When you make your initial API call, use the X-SRC-CX-FLOW-ID, returned in one of the client-side calls checkoutWithNewCard() or checkoutWitCard(). If you do not send X-SRC-CX-FLOW-ID in your request or if the field is empty, the Click to Pay system generates one and responds with the X-SRC-CX-FLOW-ID in the header. The X-SRC-CX-FLOW-ID returned in the response can be used in the subsequent calls to ensure these calls are directed to the same server that returned the initial response."
+          example: 34F4A04B.B9EF8486-E8C1-44F3-88DC-D4F516A354DC.1587777300
+          in: header
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostbackConfirmationRequest'
+        required: true
+      responses:
+        "204":
+          description: "No content, the confirmation message was accepted."
+          headers:
+            x-src-cx-flow-id:
+              description: Identifier for checkout session.
+              schema:
+                type: string
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+      x-codegen-request-body-name: PostbackConfirmationRequest
+  /merchantCards:
+    post:
+      tags:
+        - Card On File
+      summary: Saves a Card on File (COF)
+      description: "Tokenize consumer’s card to return merchantCardId using FPAN (outside checkout). Merchants can then store the merchantCardId and card details, and use them on a subsequent transactions."
+      operationId: saveCOF
+      parameters:
+        - name: x-openapi-clientid
+          description: Open API key to make the server to server call to Mastercard SRCI. This ID is provided to the client during the onboarding process to make OAuth1.0 based signed requests. The value MUST match the Click to Pay Client ID present in the request body.
+          example: 3f34bev5-55dc-4c2d-a971-3ec37175364k
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: x-src-cx-flow-id
+          description: "The X-SRC-CX-FLOW-ID helps in routing and session affinity. Usage of X-SRC-CX-FLOW-ID in requests ensures requests by the same client are directed to the same server. When you make your initial API call, use the X-SRC-CX-FLOW-ID, returned in one of the client-side calls checkoutWithNewCard() or checkoutWitCard(). If you do not send X-SRC-CX-FLOW-ID in your request or if the field is empty, the Click to Pay system generates one and responds with the X-SRC-CX-FLOW-ID in the header. The X-SRC-CX-FLOW-ID returned in the response can be used in the subsequent calls to ensure these calls are directed to the same server that returned the initial response."
+          example: 39a9af3f-e27c-49f2-b924-26b74938d013
+          in: header
+          schema:
+            type: string
+        - name: x-src-trace-id
+          description: "Trace Id of the present checkout session. If present, can be used to trace the calls within a checkout session."
+          in: header
+          example: 39a9af3f-e27c-49f2-b924-26b74938d013
+          schema:
+            type: string
+      x-mastercard-api-encrypted: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CardOnFileRequest'
+            examples:
+              EXAMPLE - TRANSACTION ID:
+                value:
+                  merchantTransactionId: 0a4e0d3.34f4a04b.d4c3b4d0b02629ddfeabc5339dd1ca534bca9248
+                  srcDpaId: b756a2b0-ef62-4c62-a6de-f72e75ce5f17
+                  correlationId: ba7a2034-3c9e-4d74-b0e9-d77435fd35d7
+                  merchantAccountId: fd569a31-1215-4cdd-8627-65a42167b902
+              EXAMPLE - ENCRYPTED CARD:
+                value:
+                  srcDpaId: b756a2b0-ef62-4c62-a6de-f72e75ce5f17
+                  correlationId: ba7a2034-3c9e-4d74-b0e9-d77435fd35d7
+                  merchantAccountId: fd569a31-1215-4cdd-8627-65a42167b902
+                  accountReference:
+                    type: ENCRYPTED_CARD
+                    value:
+                      cardSource: CARDHOLDER
+                      encryptedCard: eyJlbmMiOiJBMTI4R0NNIiwiYWxnIjoiUlNBLU9BRVAtMjU2In0.JuY0CqGAIOY7ZcM8Ix8Jiu7oWa-EYGgt5o2BrmhgKeLm8k8-eaH08WnACVIs9ef00gRUTbs8lkyvNddYgiM0jFuFF0pOzdP5mjYJmbvIf8bIaa44YrcfvpGErUsfvVSkw5n8Hovs67ftv5ex3vF7IYn_aQDGWcIujf6D6l7vf2vampOXuCu0D7h6iFh0gPO1VqvamWjwFidQbrtoduUZoGZjMZYW0sLiMcbZsVOYsSzVNhgEX7jSfxumlDnKwR8V33-4gEF51gG1YJCjce18ZI4F0UWPz73A71TyLHgMLQvJOoKx4RMyJ8cQI4eVSkQyjvEfN68UhsXKm0wS1IFAQw.tWk7_kinD2evGU65.j63KDiBPGEWpn6rDC0j-dvXsX69w4bC88j64sKsYcaAY9PJkBN1DXJsfOIAMPezkxDyLr0Nd2rqOti1tsLAhUxI4Whz5-wSY65uErYxPgKPOS8ihpEBftRwJ-H5JyqX09D7wSC6sWBb2MBYwHVDlwETGwU9psV4dHw.-5kx-YVIoZ88vW6qj9hSJA
+        required: true
+      responses:
+        "200":
+          description: Saved card details included in the response body
+          headers:
+            x-src-cx-flow-id:
+              description: "The X-SRC-CX-FLOW-ID helps in routing and session affinity. Usage of X-SRC-CX-FLOW-ID in requests ensures requests by the same client are directed to the same server. When you make your initial API call, use the X-SRC-CX-FLOW-ID, returned in one of the client-side calls checkoutWithNewCard() or checkoutWitCard(). If you do not send X-SRC-CX-FLOW-ID in your request or if the field is empty, the Click to Pay system generates one and responds with the X-SRC-CX-FLOW-ID in the header. The X-SRC-CX-FLOW-ID returned in the response can be used in the subsequent calls to ensure these calls are directed to the same server that returned the initial response."
+              example: 39a9af3f-e27c-49f2-b924-26b74938d013
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CardOnFileResponse'
+              examples:
+                EXAMPLE - TRANSACTION ID:
+                  value:
+                    merchantCardId: 954bcc55-be30-4b68-a53a-b6c8907babee
+                    correlationId: ba7a2034-3c9e-4d74-b0e9-d77435fd35d7
+                    maskedCard:
+                      panBin: 545503
+                      panLastFour: 0451
+                      digitalCardData:
+                        descriptionName: Bank Rewards Mastercard
+                        artUri: https://stage.assets.mastercard.com/card-art/combined-image-asset/HIGH-MASK-3x.png
+                      panExpirationMonth: 08
+                      panExpirationYear: 2023
+                      paymentCardDescriptor: mastercard
+                      paymentCardType: DEBIT
+                EXAMPLE - ENCRYPTED CARD:
+                  value:
+                    merchantCardId: 954bcc55-be30-4b68-a53a-b6c8907babee
+                    correlationId: ba7a2034-3c9e-4d74-b0e9-d77435fd35d7
+                    maskedCard:
+                      panBin: 545503
+                      panLastFour: 0451
+                      digitalCardData:
+                        descriptionName: Bank Rewards Mastercard
+                        artUri: https://stage.assets.mastercard.com/card-art/combined-image-asset/HIGH-MASK-3x.png
+                      panExpirationMonth: 08
+                      panExpirationYear: 2023
+                      paymentCardDescriptor: mastercard
+                      paymentCardType: DEBIT
+
+
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+      x-codegen-request-body-name: CardOnFileRequest
+  /merchantCards/{merchantCardId}:
+    delete:
+      tags:
+        - Card On File
+      summary: Delete a previously saved card on file.
+      description: The Delete Card on File operation will delete the card with the specified Merchant card identifier. The Merchant card identifier may be associated with a Recurring payment or a Split shipment.
+      operationId: deleteCOF
+      parameters:
+        - name: merchantCardId
+          in: path
+          description: Merchant Card ID for a consumer. This is returned by Save Card on File endpoint.
+          required: true
+          example: ea9862e0-f937-4b4b-932d-2653bdd55ef9
+          schema:
+            type: string
+        - name: x-openapi-clientid
+          in: header
+          description: Open API key to make the server to server call to Mastercard SRCI. This ID is provided to the client during the onboarding process to make OAuth1.0 based signed requests. The value MUST match the Click to Pay Client ID present in the request body.
+          example: 3f34bev5-55dc-4c2d-a971-3ec37175364k
+          required: true
+          schema:
+            type: string
+        - name: x-src-trace-id
+          description: "Trace Id of the present checkout session. If present, can be used to trace the calls within a checkout session."
+          in: header
+          example: 39a9af3f-e27c-49f2-b924-26b74938d013
+          schema:
+            type: string
+        - name: srcDpaId
+          in: query
+          description: Identifies the connecting client. This will be the DPA ID of the v2 merchant.
+          required: true
+          example: b756a2b0-ef62-4c62-a6de-f72e75ce5f17
+          schema:
+            type: string
+        - name: correlationId
+          in: query
+          description: "Unique identifier generated by an SRC System. If an srcCorrelationId is generated and returned to a participant, it must be included in all subsequent messages sent to the SRC System within the same transaction context."
+          example: 82cb0848-918c-495f-86ba-ca5130365d48
+          required: false
+          schema:
+            type: string
+        - name: merchantAccountId
+          in: query
+          example: fd569a31-1215-4cdd-8627-65a42167b902
+          description: "Merchant issued Account ID for a consumer. It serves as an integration check. It will be validated against, if `merchantCardId` was generated with an `merchantAccountId` in SaveCOF operation."
+          schema:
+            type: string
+      x-mastercard-api-encrypted: true
+      responses:
+        "204":
+          description: "No Content, merchant card deletion was successful."
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+components:
+  responses:
+    BadRequest:
+      description: "Bad request, see error object for details."
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+          examples:
+            InvalidArgument:
+              $ref: '#/components/examples/InvalidArgument'
+    Forbidden:
+      description: "Forbidden, see error object for details, e.g. client identity (origin) not validated."
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+          examples:
+            PermissionDenied:
+              $ref: '#/components/examples/PermissionDenied'
+    NotFound:
+      description: Checkout transaction not found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+          examples:
+            TransactionNotFound:
+              $ref: '#/components/examples/TransactionNotFound'
+    Unauthorized:
+      description: "Unauthorized, see error object for details, e.g. authorization token validation failure."
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Errors'
+          examples:
+            Unauthenticated:
+              $ref: '#/components/examples/Unauthenticated'
+  examples:
+    InvalidArgument:
+      value:
+        error:
+          - description: Invalid DPA ID
+            reasonCode: INVALID_ARGUMENT
+            details:
+              detail:
+                - name: dpaId
+    PermissionDenied:
+      value:
+        error:
+          - description: Invalid DPA ID
+            reasonCode: PERMISSION_DENIED
+            details:
+              detail:
+                - name: dpaId
+                  value: 79aafb12-921e-4d84-9e6d-dbdfd161ac2b
+    TransactionNotFound:
+      value:
+        error:
+          - description: Transaction data not found
+            reasonCode: NOT_FOUND
+            details:
+              detail:
+                - name: transactionId
+                  value: 0a4e0d3.34f4a04b.7b2b1cc06846c7a6c8ec291541747c61a
+    Unauthenticated:
+      value:
+        error:
+          - description: Invalid OpenAPI Client ID
+            reasonCode: UNAUTHENTICATED
+            details:
+              detail:
+                - name: x-openapi-clientid
+                  value: RIsm482cUFQUpWS7rBosqifmKrNhPcVYwmnrnX3ne5d9f0ed
+  schemas:
+    AccountReference:
+      type: object
+      required:
+        - value
+        - type
+      properties:
+        type:
+          $ref: '#/components/schemas/AccountReferenceType'
+        value:
+          $ref: '#/components/schemas/AccountReferenceData'
+    AccountReferenceData:
+      type: object
+      properties:
+        encryptedCard:
+          $ref: '#/components/schemas/PlainCard'
+        cardSource:
+          description: "Holds the Origin of Card Enrollment. Internally following mappings are applied: CARDHOLDER -> CARD_ADDED_MANUALLY MERCHANT -> CARD_ON_FILE"
+          enum:
+            - CARDHOLDER
+            - MERCHANT
+          type: string
+          example: CARDHOLDER
+    AccountReferenceType:
+      description: Type of the Account Reference
+      type: string
+      enum:
+        - ENCRYPTED_CARD
+        - CARD
+    AssuranceData:
+      title: AssuranceData
+      type: object
+      description: Information about any risk assessment functions performed by the Mastercard Click to Pay System.
+      properties:
+        verificationData:
+          description: The VerificationData structure can contain data relating to various entities within the specification.
+          items:
+            $ref: '#/components/schemas/VerificationData'
+          type: array
+    CardOnFileMaskedCard:
+      title: CardOnFileMaskedCard
+      description: Masked card saved on file.
+      required:
+        - panBin
+        - panLastFour
+        - digitalCardData
+      type: object
+      properties:
+        srcDigitalCardId:
+          maxLength: 36
+          description: < Unique Identifier of the Card. Reference representing the PAN or Payment Token that enables a non-SRCPI entity to identify the underlying PAN. A single PAN can have one or more SRC Digital Card Reference Identifiers. Digital Card information can be accompanied with SRC Digital Card Reference Identifier. It is associated with the SRC Profile to which the Digital Card belongs and is unique within an SRC System.
+          example: 297b379a-663c-4e31-a019-b3a48701b8ae
+          type: string
+        panBin:
+          description: First significant digits of the PAN included in an unmasked form.
+          example: 545503
+          type: string
+        panLastFour:
+          maxLength: 4
+          description: Attribute of the Payment Card that represents the Last four digits of the PAN included in an unmasked form.
+          example: 123
+          type: string
+        digitalCardData:
+          $ref: '#/components/schemas/DigitalCardData'
+        panExpirationMonth:
+          maxLength: 2
+          example: 10
+          description: Expiration month of the Payment Card expressed as a two-digit calendar month used for presentation purposes.
+          type: string
+        panExpirationYear:
+          maxLength: 4
+          example: 29
+          description: "Expiration year of the Payment Card expressed as four-digit calendar year, used for presentation purposes."
+          type: string
+        paymentCardDescriptor:
+          description: "Conveys the card brand, and will be a free-form string, to be defined within an SRC Programme."
+          maxLength: 32
+          example: mastercard
+          type: string
+        paymentCardType:
+          maxLength: 32
+          description: "Conveys the card type. For example:CREDIT, DEBIT, PREPAID, COMBO, FLEX. Note:COMBO and FLEX for applicable regions only."
+          example: CREDIT
+          type: string
+        digitalCardFeatures:
+          description: Card benefits associated with a Digital Card to be presented to the Consumer at the time of checkout.
+          items:
+            $ref: '#/components/schemas/DigitalCardFeature'
+          type: array
+    CardOnFileRequest:
+      title: CardOnFileRequest
+      required:
+        - srcDpaId
+      type: object
+      properties:
+        merchantTransactionId:
+          description: Merchant Checkout Transaction Identifier which is returned in the checkoutResponse to either checkoutWithCard or checkoutWithNewCard JavaScript methods and links the client-side JavaScript calls and server-side API calls for a specific transaction. Optional for Subsequent Payment or Subsequent Split Shipment.
+          example: 0a4e0d3.34f4a04b.390515165b8f87a5a0694cd752752ff6717fce21
+          type: string
+        srcDpaId:
+          description: Client ID. This will be the DPA ID of the v2 merchant.
+          example: b756a2b0-ef62-4c62-a6de-f72e75ce5f17
+          type: string
+        correlationId:
+          description: Correlation Id. Must be passed when merchantTransactionId is passed.
+          example: ba7a2034-3c9e-4d74-b0e9-d77435fd35d7
+          type: string
+        merchantAccountId:
+          description: "Merchant issued Account ID for a consumer. If provided, it serves as an integration check."
+          example: fd569a31-1215-4cdd-8627-65a42167b902
+          type: string
+        accountReference:
+          $ref: '#/components/schemas/AccountReference'
+    CardOnFileResponse:
+      title: CardOnFileResponse
+      example:
+        merchantCardId: 5451acf4-c816-4db0-a3d2-c61b377854d3
+        correlationId: ba7a2034-3c9e-4d74-b0e9-d77435fd35d7
+        maskedCard:
+          panBin: 545503
+          panLastFour: 0173
+          panExpirationMonth: 10
+          panExpirationYear: 29
+          paymentCardDescriptor: mastercard
+          digitalCardData:
+            descriptorName: Citi Bank Product Configuration
+            artUri: https://stage.assets.mastercard.com/card-art/combined-image-asset/HIGH-MASK-3x.png
+      required:
+        - correlationId
+        - merchantCardId
+      type: object
+      properties:
+        merchantCardId:
+          description: Merchant Card ID returned by SRCI.
+          example: 5451acf4-c816-4db0-a3d2-c61b377854d3
+          type: string
+        correlationId:
+          description: Correlation ID.
+          example: ba7a2034-3c9e-4d74-b0e9-d77435fd35d7
+          type: string
+        maskedCard:
+          $ref: '#/components/schemas/CardOnFileMaskedCard'
+    CheckoutAddress:
+      title: CheckoutAddress
+      type: object
+      properties:
+        name:
+          description: Address name. Only provided when address is a shipping address.
+          maxLength: 100
+          example: John Doe
+          type: string
+        line1:
+          description: Address line 1.
+          maxLength: 75
+          example: 123 Example St
+          type: string
+        line2:
+          description: Address line 2.
+          maxLength: 75
+          example: STE 404
+          type: string
+        line3:
+          description: Address line 3
+          example: Lake Street
+          maxLength: 75
+          type: string
+        city:
+          description: Address city.
+          maxLength: 50
+          example: Salk Lake
+          type: string
+        state:
+          description: Address state.
+          maxLength: 30
+          example: WV
+          type: string
+        countryCode:
+          description: Address country code. ISO 3166 alpha 2 country code.
+          example: US
+          type: string
+        zip:
+          description: Address zip/postal code.
+          maxLength: 16
+          example: 20330
+          type: string
+    CheckoutCardResponse:
+      title: CheckoutCardResponse
+      type: object
+      required:
+        - primaryAccountNumber
+      properties:
+        primaryAccountNumber:
+          description: "Primary Account Number. A variable length, ISO/IEC 7812-compliant account number that is generated within account ranges associated with a BIN by a Card Issuer."
+          example: 5204731600014784
+          maxLength: 19
+          minLength: 9
+          type: string
+        panExpirationMonth:
+          description: "Expiration month of the Card, expressed as a two-digit calendar month"
+          example: 10
+          maxLength: 2
+          type: string
+        panExpirationYear:
+          description: "Expiration year of the Card, expressed as a four-digit calendar year"
+          example: 2022
+          maxLength: 4
+          type: string
+        cardholderFullName:
+          description: Cardholder Name
+          example: John Doe
+          maxLength: 100
+          type: string
+    CheckoutDigitalCardData:
+      title: CheckoutDigitalCardData
+      description: |
+        Contains digital card information that is used in the user interface to provide reference to the actual PAN or Payment Token without actually disclosing either. Digital Card Data is grouped based on the following
+
+          * PAN Authorisation Digital Card Information: data used in Request and Response Messages
+          * UI/UX Presentation Data: data used user interfaces to provide the user with a recognisable descriptor
+          * Digital Card Art: image that accompanies Digital Card information for user interface purposes
+      required:
+        - descriptorName
+        - artUri
+      type: object
+      properties:
+        presentationName:
+          example: Citi Bank
+          description: Presentation text created by the Consumer to enable recognition of the PAN entered into the DCF. This value is unique to the DCF and defined by the Consumer. (e.g. Nickname).
+          type: string
+        descriptorName:
+          maxLength: 64
+          example: Citi Bank Product Configuration
+          description: Presentation text defined by the SRC Programme that describes the PAN presented as a Digital Card. This descriptor is the same across all DCFs.
+          type: string
+        artUri:
+          maxLength: 1024
+          example: https://stage.assets.mastercard.com/card-art/combined-image-asset/HIGH-MASK-3x.png
+          description: URI that locates the Card Art image to be used for presentation purposes. Should be provided by an Issuer.
+          type: string
+        coBrandName:
+          maxLength: 128
+          example: MASTERCARD
+          description: Textual name of the co- brand partner. Available for MA only.
+          type: string
+        isCoBranded:
+          example: false
+          description: Indicates whether the product is co-branded. Available for MA only.
+          type: boolean
+    CheckoutEncryptedPayload:
+      title: CheckoutEncryptedPayload
+      description: |
+        JWE[Payload] that contains payment and/or consumer data. The payload data object returned via the encryptedPayload string in the POST transaction/credentials response. Once decrypted the data will consist of a JSON document with relevant payment and consumer data.
+      type: object
+      required:
+        - dynamicData
+      properties:
+        card:
+          $ref: '#/components/schemas/CheckoutCardResponse'
+        token:
+          $ref: '#/components/schemas/CheckoutToken'
+        shippingAddress:
+          $ref: '#/components/schemas/CheckoutAddress'
+        consumerEmailAddress:
+          description: Consumer-provided email address.
+          example: abc@mastercard.com
+          format: email
+          maxLength: 255
+          type: string
+        consumerMobileNumber:
+          $ref: '#/components/schemas/PhoneNumber'
+        dynamicData:
+          $ref: '#/components/schemas/DynamicData'
+        billingAddress:
+          $ref: '#/components/schemas/CheckoutAddress'
+        threeDsOutputData:
+          type: array
+          description: Object containing threeDS data.
+          items:
+            $ref: '#/components/schemas/JSONObject'
+    CheckoutMaskedCard:
+      title: CheckoutMaskedCard
+      description: Masked card saved on file.
+      required:
+        - srcDigitalCardId
+        - panBin
+        - panLastFour
+        - digitalCardData
+      type: object
+      properties:
+        srcDigitalCardId:
+          maxLength: 36
+          description: < Unique Identifier of the Card. Reference representing the PAN or Payment Token that enables a non-SRCPI entity to identify the underlying PAN. A single PAN can have one or more SRC Digital Card Reference Identifiers. Digital Card information can be accompanied with SRC Digital Card Reference Identifier. It is associated with the SRC Profile to which the Digital Card belongs and is unique within an SRC System.
+          example: 297b379a-663c-4e31-a019-b3a48701b8ae
+          type: string
+        panBin:
+          description: First significant digits of the PAN included in an unmasked form.
+          example: 545503
+          type: string
+        panLastFour:
+          maxLength: 4
+          description: Attribute of the Payment Card that represents the Last four digits of the PAN included in an unmasked form.
+          example: 123
+          type: string
+        digitalCardData:
+          $ref: '#/components/schemas/CheckoutDigitalCardData'
+        panExpirationMonth:
+          maxLength: 2
+          example: 10
+          description: Expiration month of the Payment Card expressed as a two-digit calendar month used for presentation purposes.
+          type: string
+        panExpirationYear:
+          maxLength: 4
+          example: 29
+          description: "Expiration year of the Payment Card expressed as four-digit calendar year, used for presentation purposes."
+          type: string
+        maskedCardholderFullName:
+          description: Masked cardholder Full Name.
+          maxLength: 60
+          example: John Doe
+          type: string
+        maskedCardholderFirstName:
+          description: Masked cardholder First Name.
+          maxLength: 30
+          example: John
+          type: string
+        maskedCardholderLastName:
+          description: Masked cardholder Last Name.
+          maxLength: 30
+          example: Doe
+          type: string
+        paymentCardDescriptor:
+          description: "Conveys the card brand, and will be a free-form string, to be defined within an SRC Programme."
+          maxLength: 32
+          example: mastercard
+          type: string
+        paymentCardType:
+          maxLength: 32
+          description: "Conveys the card type. For example:CREDIT, DEBIT, PREPAID, COMBO, FLEX. Note:COMBO and FLEX for applicable regions only."
+          example: CREDIT
+          type: string
+        digitalCardFeatures:
+          items:
+            $ref: '#/components/schemas/DigitalCardFeature'
+          type: array
+          description: Card benefits associated with a Digital Card to be presented to the Consumer at the time of checkout.
+        maskedBillingAddress:
+          $ref: '#/components/schemas/MaskedAddress'
+    CheckoutMaskedConsumer:
+      title: CheckoutMaskedConsumer
+      type: object
+      properties:
+        maskedFirstName:
+          description: Masked first name of the Consumer.
+          example: J***
+          type: string
+        maskedLastName:
+          description: Masked last name of the Consumer.
+          example: D**
+          type: string
+        maskedFullName:
+          description: Masked full name of the Consumer.
+          example: J*** D**
+          type: string
+        maskedEmailAddress:
+          description: Masked Consumer email address.
+          example: j*****3@gmail.com
+          maxLength: 255
+          type: string
+        maskedMobileNumber:
+          $ref: '#/components/schemas/PhoneNumber'
+    CheckoutReference:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/CheckoutReferenceType'
+        data:
+          $ref: '#/components/schemas/CheckoutReferenceData'
+    CheckoutReferenceData:
+      type: object
+      properties:
+        merchantCardId:
+          maxLength: 64
+          description: |
+            Optionally carries the Card Identifier returned by Save Card on File endpoint.
+            When provided here, Mastercard's SRCI system will use the associated Card to perform a checkout and return the transaction credentials for the same:
+
+            * For Subsequent Payment, this will be the value returned by SaveCOF operation.
+            * For Subsequent Split Shipment, this will be the value returned by a previous POST: checkout/transaction/credentials) operation.
+          example: 43bdd7b1-deac-4d74-b5a9-5d8177e1d9ee
+          type: string
+        merchantTransactionId:
+          maxLength: 64
+          example: 0a4e0d3.34f4a04b.9bb89ce9da7ea8ca14d93582fa09b9c7d7178f75
+          description: |
+            Optionally carries the Merchant Checkout Transaction Identifier which is returned in the checkoutResponse to either checkoutWithCard or checkoutWithNewCard JavaScript methods and links the client-side JavaScript calls and server-side API calls for a specific transaction.
+            Optional for Subsequent Payment or Subsequent Split Shipment.
+          type: string
+        encryptedCard:
+          $ref: '#/components/schemas/PlainCard'
+    CheckoutReferenceType:
+      description: Type of the ChecloutReference value
+      type: string
+      enum:
+        - MERCHANT_CARD_ID
+        - MERCHANT_TRANSACTION_ID
+        - ENCRYPTED_CARD
+    CheckoutRequest:
+      title: CheckoutRequest
+      required:
+        - srcDpaId
+        - checkoutType
+        - checkoutReference
+      type: object
+      properties:
+        srcDpaId:
+          description: Client ID. This is the DPA ID of the merchant.
+          example: 3f34bev5-55dc-4c2d-a971-3ec37175364k
+          type: string
+        merchantAccountId:
+          description: "Merchant issued Account ID for a consumer. It serves as an integration check. It must be provided, if Merchant is using a Saved card and had specified the same during the SaveCOF operation."
+          example: 371d778c-62f6-450c-bf30-94093b89a17c
+          type: string
+        correlationId:
+          description: "Correlation ID for this transaction. If available within the present checkout session (e.g. received in an earlier API response during the present session), then it must be provided, otherwise a new checkout session will be initiated."
+          example: 860cf27e-699d-4071-891c-3902a7406760
+          type: string
+        checkoutType:
+          $ref: '#/components/schemas/CheckoutType'
+        checkoutReference:
+          $ref: '#/components/schemas/CheckoutReference'
+        dpaTransactionOptions:
+          $ref: '#/components/schemas/DpaTransactionOptions'
+    CheckoutResponse:
+      title: CheckoutResponse
+      required:
+        - correlationId
+        - encryptedPayload
+        - merchantTransactionId
+      properties:
+        merchantTransactionId:
+          description: Merchant Checkout Transaction Identifier which is returned in the checkoutResponse to either checkoutWithCard or checkoutWithNewCard JavaScript methods and links the client-side JavaScript calls and server-side API calls for a specific transaction. Optional for Subsequent Payment or Subsequent Split Shipment.
+          example: 0a4e0d3.34f4a04b.390515165b8f87a5a0694cd752752ff6717fce21
+          type: string
+        encryptedPayload:
+          $ref: '#/components/schemas/CheckoutEncryptedPayload'
+        correlationId:
+          description: Correlation ID.
+          example: 6de623b6-dce5-488e-9994-e7334b15bc73
+          type: string
+        merchantCardId:
+          description: Merchant card identifer.
+          example: 43bdd7b1-deac-4d74-b5a9-5d8177e1d9ee
+          type: string
+        assuranceData:
+          $ref: '#/components/schemas/AssuranceData'
+        maskedCard:
+          $ref: '#/components/schemas/CheckoutMaskedCard'
+        maskedConsumer:
+          $ref: '#/components/schemas/CheckoutMaskedConsumer'
+    CheckoutToken:
+      title: CheckoutToken
+      type: object
+      required:
+        - paymentToken
+      properties:
+        paymentToken:
+          description: < Payment Token. ISO/IEC 7812 format
+          example: 5455030208766644
+          type: string
+        tokenExpirationMonth:
+          maxLength: 2
+          description: < Two-digit expiry month (MM) Conditionality- Supplied when specified for the Payment Token.
+          example: 10
+          type: string
+        tokenExpirationYear:
+          maxLength: 4
+          description: < Four-digit expiry year (YYYY) Conditionality- Supplied when specified for the Payment Token
+          example: 2017
+          type: string
+        paymentAccountReference:
+          maxLength: 29
+          description: < Payment Account Reference. A non-financial reference assigned to each unique PAN and used to link a Payment Account represented by that PAN to affiliated Payment Tokens.
+          type: string
+          example: 5001a9f027e5629d11e3949a0800b
+        cardholderFullName:
+          description: Cardholder Name.
+          example: John Doe
+          maxLength: 100
+          type: string
+    CheckoutType:
+      type: string
+      description: "Checkout Type, Request will only be processed when appropriate 'checkoutType' is associated with DPA. If it is not passed, it will default to CLICK_TO_PAY."
+      enum:
+        - CLICK_TO_PAY
+        - CARD_ON_FILE_TOKENIZATION
+        - GUEST_CHECKOUT_TOKENIZATION
+        - INSTALLMENTS
+    ConfirmationData:
+      title: ConfirmationData
+      type: object
+      description: Confirmation data for transaction.
+      properties:
+        checkoutEventType:
+          maxLength: 2
+          description: |
+            Event type associated with the update. Valid values are:
+
+              * 01 - Authorise
+              * 02 - Capture
+              * 03 - Refund
+              * 04 - Cancel
+              * 05 - Fraud
+              * 06 - Chargeback
+              * 07 - Other
+          example: 1
+          type: string
+        checkoutEventStatus:
+          maxLength: 2
+          description: |
+            Event type associated with the order. Valid values are:
+
+              * 01 - Created
+              * 02 - Confirmed
+              * 03 - Cancelled
+              * 04 - Fraud Cancelled
+              * 05 - Others
+              * 06-50 - EMVCo future use
+              * 51-99 - SRC System specific
+          example: 1
+          type: string
+        confirmationStatus:
+          maxLength: 2
+          description: |
+            Status of the event as provided by the SRC Initiator in the Confirmation message. Valid values are:
+
+              * 01 - Success
+              * 02 - Failure
+              * 03 - Other
+          example: 1
+          type: string
+        confirmationReason:
+          maxLength: 64
+          example: Order Successfully Created
+          description: Description of the reason for the event associated with the order.
+          type: string
+        confirmationTimestamp:
+          example: 2020-04-25T01:15:00.000Z
+          description: Date and time of the event completion corresponding to the Confirmation event by the SRC Initiator.
+          type: string
+        networkAuthorizationCode:
+          maxLength: 25
+          example: 2020404
+          description: Authorisation code associated with an approved transaction.
+          type: string
+        networkTransactionIdentifier:
+          example: UNAVLB
+          maxLength: 25
+          description: Unique authorisation related tracing value assigned by a Payment Network and provided in an authorisation response.
+          type: string
+        paymentNetworkReference:
+          maxLength: 25
+          example: 543215465132123132
+          description: Transaction identifier as provided by a Payment Network after authorisation has been complete.
+          type: string
+        transactionAmount:
+          $ref: '#/components/schemas/TransactionAmount'
+    Detail:
+      type: object
+      properties:
+        name:
+          description: The error related to a particular parameter.
+          type: string
+          example: transactionId
+        value:
+          description: Value of the parameter.
+          type: string
+          example: 0a4e0d3.34f4a04b.b5eab2c3ad1928a707e2500e8897469f00dff123
+    Details:
+      title: Details
+      type: object
+      properties:
+        detail:
+          description: Object containing the error detail.
+          items:
+            $ref: '#/components/schemas/Detail'
+          type: array
+    DigitalCardData:
+      title: DigitalCardData
+      description: |
+        Contains digital card information that is used in the user interface to provide reference to the actual PAN or Payment Token without actually disclosing either. Digital Card Data is grouped based on the following
+
+          * PAN Authorisation Digital Card Information: data used in Request and Response Messages
+          * UI/UX Presentation Data: data used user interfaces to provide the user with a recognisable descriptor
+          * Digital Card Art: image that accompanies Digital Card information for user interface purposes
+      required:
+        - descriptorName
+        - artUri
+      type: object
+      properties:
+        presentationName:
+          example: Citi Bank
+          description: Presentation text created by the Consumer to enable recognition of the PAN entered into the DCF. This value is unique to the DCF and defined by the Consumer. (e.g. Nickname).
+          type: string
+        descriptorName:
+          maxLength: 64
+          example: Citi Bank Product Configuration
+          description: Presentation text defined by the SRC Programme that describes the PAN presented as a Digital Card. This descriptor is the same across all DCFs.
+          type: string
+        artUri:
+          maxLength: 1024
+          example: https://stage.assets.mastercard.com/card-art/combined-image-asset/HIGH-MASK-3x.png
+          description: URI that locates the Card Art image to be used for presentation purposes. Should be provided by an Issuer.
+          type: string
+        coBrandName:
+          maxLength: 128
+          example: MASTERCARD
+          description: Textual name of the co- brand partner. Available for MA only.
+          type: string
+        isCoBranded:
+          example: false
+          description: Indicates whether the product is co-branded. Available for MA only.
+          type: boolean
+    DigitalCardFeature:
+      title: DigitalCardFeature
+      required:
+        - content
+        - contentType
+      type: object
+      properties:
+        content:
+          maxLength: 1024
+          description: Content of the digital card feature. The value is specific for the `contentType`.
+          type: string
+          example: Manhattan Bank Rewards Plus
+        contentType:
+          $ref: '#/components/schemas/DigitalCardFeatureContentType'
+        style:
+          maxLength: 1024
+          description: Location of a CSS style sheet that describes how to present the card feature.
+          type: string
+          example: https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css
+        width:
+          format: int32
+          description: Width to be applied to display of card feature.
+          type: integer
+          example: 200
+        height:
+          format: int32
+          description: Height to be applied to display of card feature.
+          type: integer
+          example: 24
+    DigitalCardFeatureContentType:
+      type: string
+      description: Digital Card features that should be displayed to the Consumer.
+      enum:
+        - TEXT_STRING
+        - IMAGE_URL
+        - CONTENT_URL
+        - LINK_URL
+    DpaTransactionOptions:
+      type: object
+      description: |
+        When provided, Mastercard's SRCI will use the `dpaTransactionOptions` to perform a checkout and return the transaction credentials for the same:
+
+        * For Subsequent Payment, `dpaTransactionOptions.transaction.Amount` will be combined with the `dpaTransactionOptions` object passed in the Init Transaction operation. Note that all other settings within this `dpaTransactionOptions` (including the `orderType` as "SPLIT_SHIPMENT") will be ignored.
+        * For Split Shipment, set `dpaTransactionOptions.orderType` = "SPLIT_SHIPMENT". Note that all other settings within this dpaTransactionOptions will be ignored. The dpaTransactionOptions object passed in the Init Transaction operation for the first split shipment will override this object.
+      title: DpaTransactionOptions
+      properties:
+        transactionAmount:
+          $ref: '#/components/schemas/TransactionAmount'
+        paymentOptions:
+          description: Specifies the dynamic data requirement for the payload creation.
+          items:
+            $ref: '#/components/schemas/PaymentOptions'
+          type: array
+        orderType:
+          description: Type of the order.
+          type: string
+          example: SPLIT_SHIPMENT
+    DynamicData:
+      type: object
+      required:
+        - dynamicDataType
+      properties:
+        dynamicDataValue:
+          description: Value of the dynamic data
+          type: string
+          example: 2223344556677889900112233445566778899001122334455667788990345
+        dynamicDataType:
+          $ref: '#/components/schemas/DynamicDataType'
+        dynamicDataExpiration:
+          description: |
+            Expiry period of the dynamic data. Format = UTC
+          type: string
+          example: 1682371012
+    DynamicDataType:
+      type: string
+      enum:
+        - CARD_APPLICATION_CRYPTOGRAM_SHORT_FORM
+        - DYNAMIC_CARD_SECURITY_CODE
+        - NONE
+    Error:
+      title: Error
+      type: object
+      properties:
+        description:
+          description: Description of the error.
+          type: string
+          example: Invalid OpenApi Client ID
+        reasonCode:
+          description: Value of the http status code.
+          type: string
+          example: UNAUTHENTICATED
+        recoverable:
+          description: Specifies if this error is recoverable.
+          type: boolean
+          example: true
+        source:
+          description: Origin of the client error.
+          type: string
+          example: body
+        details:
+          description: Details of the error.
+          $ref: '#/components/schemas/Details'
+    Errors:
+      title: Errors
+      type: object
+      example:
+        error:
+          - description: Transaction data not found
+            reasonCode: NOT_FOUND
+            recoverable: false
+            source: body
+            details:
+              detail:
+                - name: transactionId
+                  value: 0a4e0d3.34f4a04b.b5eab2c3ad1928a707e2500e8897469f00dff123
+      properties:
+        error:
+          items:
+            $ref: '#/components/schemas/Error'
+          type: array
+          description: Defines the Error Object.
+    JSONObject:
+      type: object
+    MaskedAddress:
+      title: MaskedAddress
+      type: object
+      properties:
+        name:
+          maxLength: 60
+          description: |
+            Name of the individual receiving the delivered goods or service. Only applicable for the shipping address.
+
+            _Conditionality_: If known to the Click to Pay System then must be supplied for that address.
+          example: M*** Sc****t
+          type: string
+        line1:
+          maxLength: 75
+          description: Address line 1.
+          example: 1** M*** S*
+          type: string
+        line2:
+          maxLength: 75
+          description: Address line 2.
+          example: S**** 1*
+          type: string
+        line3:
+          maxLength: 75
+          description: Address line 3.
+          example: F**** 1*
+          type: string
+        city:
+          maxLength: 50
+          description: Address city.
+          example: Newyork
+          type: string
+        state:
+          maxLength: 30
+          description: Address state.
+          example: NY
+          type: string
+        countryCode:
+          description: Address country code. ISO 3166-1 alpha 2 country code.
+          example: US
+          type: string
+        zip:
+          maxLength: 16
+          description: Address zip/ postal code.
+          example: 11010
+          type: string
+        lastUsedTime:
+          example: 2021-10-07T13:44:45.385Z
+          description: Date and time the address was last used
+          type: string
+    PaymentOptions:
+      title: PaymentOptions
+      type: object
+      properties:
+        dynamicDataType:
+          $ref: '#/components/schemas/DynamicDataType'
+    PhoneNumber:
+      type: object
+      required:
+        - countryCode
+        - phoneNumber
+      properties:
+        countryCode:
+          description: Consumer provided country code.
+          minLength: 1
+          maxLength: 4
+          example: 1
+          type: string
+        phoneNumber:
+          description: Consumer-provided phone number.
+          minLength: 4
+          maxLength: 14
+          example: 9110908005
+          type: string
+    PlainCard:
+      type: object
+      description: Card data associated with the PAN used for the purchase.
+      required:
+        - primaryAccountNumber
+        - panExpirationMonth
+        - panExpirationYear
+      properties:
+        primaryAccountNumber:
+          description: "Primary Account Number. A variable length, ISO/IEC 7812-compliant account number that is generated within account ranges associated with a BIN by a Card Issuer."
+          example: 5204731600014784
+          maxLength: 19
+          minLength: 9
+          type: string
+        panExpirationMonth:
+          description: "Expiration month of the Card, expressed as a two-digit calendar month."
+          example: 10
+          maxLength: 2
+          type: string
+        panExpirationYear:
+          description: "Expiration year of the Card, expressed as a four-digit calendar year."
+          example: 2022
+          maxLength: 4
+          type: string
+        cardSecurityCode:
+          description: Card security code (i.e. Card CVC).
+          example: 123
+          type: string
+    PostbackConfirmationRequest:
+      title: PostbackConfirmationRequest
+      example:
+        merchantTransactionId: 0a4e0d3.34f4a04b.bddaa2cf22b394705447f2b03ca662eb86d0b253
+        correlationId: 43465920-50e4-475f-a8d8-198a842fd3bf
+        confirmationData:
+          checkoutEventType: 01
+          checkoutEventStatus: 01
+          confirmationStatus: 01
+          confirmationReason: The payment was successful
+          confirmationTimestamp: 2020-04-25T01:15:00.000Z
+          networkAuthorizationCode: 2020404
+          networkTransactionIdentifier: mastercard
+          transactionAmount:
+            transactionAmount: 1200
+            transactionCurrencyCode: USD
+      required:
+        - confirmationData
+        - correlationId
+      type: object
+      properties:
+        correlationId:
+          description: Correlation ID.
+          example: 43465920-50e4-475f-a8d8-198a842fd3bf
+          type: string
+        merchantTransactionId:
+          description: Merchant Checkout Transaction Identifier which is returned in the checkoutResponse to either checkoutWithCard or checkoutWithNewCard JavaScript methods and links the client-side JavaScript calls and server-side API calls for a specific transaction. Optional for Subsequent Payment or Subsequent Split Shipment.
+          example: 0a4e0d3.34f4a04b.390515165b8f87a5a0694cd752752ff6717fce21
+          type: string
+        confirmationData:
+          $ref: '#/components/schemas/ConfirmationData'
+    TransactionAmount:
+      title: TransactionAmount
+      description: The value of the transaction.
+      required:
+        - transactionAmount
+        - transactionCurrencyCode
+      type: object
+      properties:
+        transactionAmount:
+          description: Amount of the transaction.
+          maxLength: 18
+          example: 150.0
+          type: string
+        transactionCurrencyCode:
+          description: Currency in which the transaction amount is expressed. Format is ISO 4217 standard alpha-3 code.
+          example: USD
+          type: string
+    VerificationData:
+      required:
+        - verificationEntity
+        - verificationMethod
+        - verificationResults
+        - verificationTimestamp
+        - verificationType
+      type: object
+      properties:
+        verificationType:
+          $ref: '#/components/schemas/VerificationType'
+        verificationEntity:
+          maxLength: 64
+          description: Entity performing the verification.
+          type: string
+          example: 02
+        verificationMethod:
+          maxLength: 64
+          description: Method of the verification
+          type: string
+          example: 02
+        verificationResults:
+          maxLength: 64
+          description: Result of the verification.
+          type: string
+          example: 01
+        verificationTimestamp:
+          description: Date and time when the verification was conducted. UTC time in Unix epoch format
+          type: string
+          example: 1659640986
+        additionalData:
+          description: Data related to the verification performed.
+          type: string
+          example: ""
+        verificationEvents:
+          description: Authentication reason
+          items:
+            type: string
+          type: array
+    VerificationType:
+      type: string
+      description: Type of the verification data.
+      enum:
+        - CARD
+        - CARDHOLDER
+        - CONSUMER
+        - DEVICE
+        - RELATIONSHIP
